@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Sky Background Gradient -->
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00a8ff" />
+      <stop offset="45%" stop-color="#38b6ff" />
+      <stop offset="80%" stop-color="#70d6ff" />
+      <stop offset="100%" stop-color="#a0e7ff" />
+    </linearGradient>
+
+    <!-- Cloud Soft Gradients -->
+    <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#d4efff" stop-opacity="0.85" />
+    </linearGradient>
+    
+    <linearGradient id="cloudShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b8e1fc" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#80c6f5" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Fluffy Body 3D Radial Lighting -->
+    <radialGradient id="bodyFurLight" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="55%" stop-color="#f5f8ff" />
+      <stop offset="85%" stop-color="#e2ebf8" />
+      <stop offset="100%" stop-color="#c6d8f2" />
+    </radialGradient>
+
+    <!-- Inner Ear Blush Gradient -->
+    <linearGradient id="earBlush" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ff9ec7" />
+      <stop offset="70%" stop-color="#ffc2db" />
+      <stop offset="100%" stop-color="#fff5f8" />
+    </linearGradient>
+
+    <!-- Eye Gradient -->
+    <radialGradient id="eyePupil" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#2c3e50" />
+      <stop offset="70%" stop-color="#1a1c24" />
+      <stop offset="100%" stop-color="#0a0b0d" />
+    </radialGradient>
+
+    <!-- Cheek Blush Gradient -->
+    <radialGradient id="cheekGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff76ac" stop-opacity="0.55" />
+      <stop offset="60%" stop-color="#ff9ec7" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#ff9ec7" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Soft Ambient Ground Shadow -->
+    <radialGradient id="dropShadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#094067" stop-opacity="0.25" />
+      <stop offset="60%" stop-color="#00a8ff" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#00a8ff" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Magical Star Sparkle Gradient -->
+    <linearGradient id="starGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#fff07c" />
+    </linearGradient>
+
+    <!-- Rim Light Filter -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="cloudBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" />
+    </filter>
+  </defs>
+
+  <!-- Sky Canvas with Rounded App Icon Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#skyGrad)" />
+
+  <!-- Floating Background Clouds -->
+  <g id="clouds" opacity="0.9">
+    <!-- Back Cloud Left -->
+    <path d="M 40 260 Q 30 220 70 200 Q 110 180 150 205 Q 190 190 220 225 Q 245 255 210 280 Q 170 300 120 295 Q 60 295 40 260 Z" fill="url(#cloudGrad)" />
+    <!-- Back Cloud Right -->
+    <path d="M 320 180 Q 340 140 390 145 Q 435 130 465 170 Q 495 195 480 230 Q 455 260 410 250 Q 350 255 330 220 Q 315 200 320 180 Z" fill="url(#cloudGrad)" />
+    <!-- Fluffy Bottom Cumulus Cushion -->
+    <ellipse cx="256" cy="465" rx="210" ry="60" fill="url(#cloudGrad)" filter="url(#cloudBlur)" opacity="0.6" />
+    <path d="M 20 480 C 60 430 140 430 180 460 C 220 420 300 420 340 460 C 380 415 470 425 500 480 C 470 515 50 515 20 480 Z" fill="url(#cloudGrad)" />
+  </g>
+
+  <!-- Creature Ambient Float Shadow -->
+  <ellipse cx="256" cy="418" rx="110" ry="22" fill="url(#dropShadow)" />
+
+  <!-- Floating Sparkles & Light Motes -->
+  <g id="sparkles">
+    <path d="M 120 150 Q 120 162 108 162 Q 120 162 120 174 Q 120 162 132 162 Q 120 162 120 150 Z" fill="url(#starGlow)" filter="url(#softGlow)" />
+    <path d="M 390 110 Q 390 125 375 125 Q 390 125 390 140 Q 390 125 405 125 Q 390 125 390 110 Z" fill="url(#starGlow)" filter="url(#softGlow)" />
+    <circle cx="150" cy="115" r="4" fill="#ffffff" opacity="0.8" />
+    <circle cx="360" cy="380" r="5" fill="#ffffff" opacity="0.85" />
+    <circle cx="95" cy="320" r="3.5" fill="#ffffff" opacity="0.7" />
+  </g>
+
+  <!-- THE WHITE FLUFFY COMPANION (NEVEA) -->
+  <g id="character" transform="translate(0, -6)">
+    <!-- Ears (Cat/Rabbit Hybrid) -->
+    <!-- Left Ear Outer Fur -->
+    <path d="M 175 185 C 150 120 160 55 205 70 C 228 100 230 145 220 190 Z" fill="url(#bodyFurLight)" />
+    <!-- Left Ear Inner Pink Fluff -->
+    <path d="M 182 170 C 168 125 174 85 200 90 C 215 110 216 142 208 172 Z" fill="url(#earBlush)" />
+    <!-- Left Ear Fur Tufts -->
+    <path d="M 160 140 Q 175 145 168 158 Q 185 156 178 175" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none" />
+
+    <!-- Right Ear Outer Fur -->
+    <path d="M 337 185 C 362 120 352 55 307 70 C 284 100 282 145 292 190 Z" fill="url(#bodyFurLight)" />
+    <!-- Right Ear Inner Pink Fluff -->
+    <path d="M 330 170 C 344 125 338 85 312 90 C 297 110 296 142 304 172 Z" fill="url(#earBlush)" />
+    <!-- Right Ear Fur Tufts -->
+    <path d="M 352 140 Q 337 145 344 158 Q 327 156 334 175" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none" />
+
+    <!-- Main Fluffy Body Silhouette with Volumetric Fur Tufts -->
+    <!-- Layer 1: Outermost Fluff Tufts Silhouette -->
+    <path d="M 256 140 
+             C 290 138 335 155 365 185 
+             C 382 188 398 202 392 220 
+             C 410 238 415 265 398 288 
+             C 412 312 405 340 382 358 
+             C 388 375 372 395 348 398 
+             C 325 418 290 422 256 420 
+             C 222 422 187 418 164 398 
+             C 140 395 124 375 130 358 
+             C 107 340 100 312 114 288 
+             C 97 265 102 238 120 220 
+             C 114 202 130 188 147 185 
+             C 177 155 222 138 256 140 Z" 
+          fill="url(#bodyFurLight)" />
+
+    <!-- Layer 2: Soft Inner Volumetric Shading / 3D Sphere Core -->
+    <circle cx="256" cy="285" r="132" fill="url(#bodyFurLight)" />
+
+    <!-- Forehead Fluff Crown Tufts -->
+    <path d="M 235 158 Q 256 135 260 162 Q 275 142 278 165" stroke="#ffffff" stroke-width="6" stroke-linecap="round" fill="none" />
+
+    <!-- Cheeks Fluff Crests (Left & Right) -->
+    <path d="M 115 260 C 95 275 102 290 120 295 C 102 308 112 325 130 326" fill="url(#bodyFurLight)" />
+    <path d="M 397 260 C 417 275 410 290 392 295 C 410 308 400 325 382 326" fill="url(#bodyFurLight)" />
+
+    <!-- Cheek Blush Radiance -->
+    <circle cx="178" cy="308" r="28" fill="url(#cheekGlow)" />
+    <circle cx="334" cy="308" r="28" fill="url(#cheekGlow)" />
+
+    <!-- Big Anime Glistening Eyes -->
+    <!-- Left Eye -->
+    <g id="leftEye">
+      <ellipse cx="198" cy="272" rx="19" ry="24" fill="url(#eyePupil)" />
+      <!-- Big Upper Catchlight -->
+      <ellipse cx="192" cy="262" rx="8" ry="10" fill="#ffffff" />
+      <!-- Secondary Soft Catchlight -->
+      <circle cx="206" cy="282" r="4.5" fill="#ffffff" opacity="0.9" />
+      <circle cx="190" cy="285" r="2.5" fill="#a0c8ff" opacity="0.8" />
+    </g>
+
+    <!-- Right Eye -->
+    <g id="rightEye">
+      <ellipse cx="314" cy="272" rx="19" ry="24" fill="url(#eyePupil)" />
+      <!-- Big Upper Catchlight -->
+      <ellipse cx="308" cy="262" rx="8" ry="10" fill="#ffffff" />
+      <!-- Secondary Soft Catchlight -->
+      <circle cx="322" cy="282" r="4.5" fill="#ffffff" opacity="0.9" />
+      <circle cx="306" cy="285" r="2.5" fill="#a0c8ff" opacity="0.8" />
+    </g>
+
+    <!-- Cute Nose & Mouth -->
+    <path d="M 252 284 C 252 281 260 281 260 284 C 260 287 256 290 256 290 C 256 290 252 287 252 284 Z" fill="#ff85ad" />
+    <!-- W-Shaped Smiling Kitten Mouth -->
+    <path d="M 243 293 Q 250 303 256 296 Q 262 303 269 293" stroke="#4a5568" stroke-width="3" stroke-linecap="round" fill="none" />
+
+    <!-- Cute Floating Paws (Tucked under body) -->
+    <!-- Left Paw -->
+    <ellipse cx="205" cy="365" rx="20" ry="14" fill="#ffffff" />
+    <path d="M 197 367 C 197 372 201 375 205 375 C 209 375 213 372 213 367" stroke="#e0e8f5" stroke-width="2.5" fill="none" />
+    <!-- Right Paw -->
+    <ellipse cx="307" cy="365" rx="20" ry="14" fill="#ffffff" />
+    <path d="M 299 367 C 299 372 303 375 307 375 C 311 375 315 372 315 367" stroke="#e0e8f5" stroke-width="2.5" fill="none" />
+  </g>
+
+  <!-- Specular Halo / Rim Glow Over Character -->
+  <circle cx="256" cy="270" r="130" stroke="#ffffff" stroke-width="3" fill="none" opacity="0.4" filter="url(#softGlow)" />
+</svg>

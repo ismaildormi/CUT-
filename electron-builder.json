@@ -1,0 +1,104 @@
+{
+  "appId": "com.kaspi.heyuka.desktop",
+  "productName": "HEYUKA AI",
+  "directories": {
+    "output": "release"
+  },
+  "publish": [
+    {
+      "provider": "github",
+      "releaseType": "release"
+    }
+  ],
+  "icon": "public/logo.png",
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "backend/**/*",
+    "server/**/*",
+    "server.ts",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "backend",
+      "to": "NeveaCore/backend",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      },
+      {
+        "target": "appx",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "public/icon.ico",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true
+  },
+  "appx": {
+    "applicationId": "NeveaAI.SentientCompanion",
+    "backgroundColor": "#050505",
+    "displayName": "NEVEA AI — Sentient 3D Companion & Multi-Agent OS",
+    "identityName": "NeveaAI.SentientCompanion",
+    "publisher": "CN=NEVEA-OPEN-SOURCE",
+    "publisherDisplayName": "NEVEA AI Open Source Collective"
+  },
+  "mac": {
+    "target": ["dmg", "zip", "mas"],
+    "category": "public.app-category.utilities",
+    "icon": "public/icon.ico",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "electron/entitlements.mac.plist",
+    "entitlementsInherit": "electron/entitlements.mac.plist",
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "NEVEA requires microphone access for real-time voice commands and wake-word detection.",
+      "NSCameraUsageDescription": "NEVEA requires camera access for live AR companion mode.",
+      "NSAppleEventsUsageDescription": "NEVEA Ghost Cursors require AppleEvents permission to automate desktop tasks on your behalf.",
+      "NSScreenCaptureUsageDescription": "NEVEA Live Vision requires screen recording permission to inspect your workspace when requested."
+    }
+  },
+  "mas": {
+    "category": "public.app-category.productivity",
+    "entitlements": "electron/entitlements.mac.plist",
+    "entitlementsInherit": "electron/entitlements.mac.plist",
+    "hardenedRuntime": false
+  },
+  "linux": {
+    "target": ["AppImage", "flatpak", "snap"],
+    "category": "Utility",
+    "icon": "public/icon.ico",
+    "synopsis": "Sentient 3D Fur Companion & Autonomous Multi-Agent OS"
+  },
+  "flatpak": {
+    "runtimeVersion": "23.08",
+    "baseVersion": "23.08",
+    "finishArgs": [
+      "--share=ipc",
+      "--socket=x11",
+      "--socket=wayland",
+      "--socket=pulseaudio",
+      "--share=network",
+      "--device=dri",
+      "--filesystem=home"
+    ]
+  },
+  "snap": {
+    "grade": "stable",
+    "confinement": "classic"
+  }
+}

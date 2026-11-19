@@ -20,14 +20,14 @@ setupGeminiLiveAudioServer(wss);
 app.use(express.json({ limit: '25mb' }));
 
 // Health Check
-app.get(['/healthz', '/_ah/health'], (_req, res) => {
-  res.status(200).send('OK');
+app.get(['/healthz', '/_ah/health', '/api/health'], (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'nevea-server' });
 });
 
-// 1. Multimodal Conversational Endpoint (Prompt + Vision + Tools + Memory)
+// 1. Multimodal Conversational Endpoint (Prompt + Vision + Tools + Memory + Character Profile)
 app.post('/api/gemini/interact', async (req, res) => {
   try {
-    const { prompt, screenshotBase64, userMemoryQuery } = req.body;
+    const { prompt, screenshotBase64, userMemoryQuery, characterProfile } = req.body;
     if (!prompt && !screenshotBase64) {
       return res.status(400).json({ error: 'Prompt or screenshot is required' });
     }
@@ -36,6 +36,7 @@ app.post('/api/gemini/interact', async (req, res) => {
       prompt: prompt || 'Look at my screen and tell me how you can help.',
       screenshotBase64,
       userMemoryQuery,
+      characterProfile,
     });
 
     res.json(result);
@@ -93,10 +94,13 @@ app.use((req, res) => {
   }
   const indexHtml = path.join(STATIC_DIR, 'index.html');
   if (fs.existsSync(indexHtml)) {
-    res.sendFile(indexHtml);
-  } else {
-    res.sendFile(path.join(process.cwd(), 'index.html'));
+    return res.sendFile(indexHtml);
   }
+  const rootIndex = path.join(process.cwd(), 'index.html');
+  if (fs.existsSync(rootIndex)) {
+    return res.sendFile(rootIndex);
+  }
+  return res.status(200).send('NEVEA Companion Server is running.');
 });
 
 server.listen(PORT, HOST, () => {

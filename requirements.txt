@@ -1,0 +1,54 @@
+# Desktop & OS Automation
+pyautogui>=0.9.54
+pywinauto>=0.6.8
+uiautomation>=2.0.20
+pygetwindow>=0.0.9
+mss>=9.0.1
+psutil>=5.9.8
+pyperclip>=1.8.2
+Pillow>=10.3.0
+cryptography>=42.0.8
+python-dotenv>=1.0.1
+GPUtil>=1.4.0
+
+# Audio & Speech
+TTS>=0.22.0
+sounddevice>=0.4.7
+soundfile>=0.12.1
+soundcard>=0.4.3
+numpy>=1.26.0
+
+# Headless Web & Vision
+playwright>=1.48.0
+duckduckgo_search>=6.1.0
+beautifulsoup4>=4.12.3
+lxml>=5.2.2
+crawl4ai>=0.3.0
+
+# Memory & Local AI Swarm
+chromadb>=0.5.0
+ollama>=0.2.1
+langchain>=0.2.0
+langchain-community>=0.2.0
+crewai>=0.30.0
+pyautogen>=0.2.27
+litellm>=1.40.0
+fastapi>=0.111.0
+uvicorn>=0.30.0
+open-interpreter>=0.3.0
+
+# Git & Code Hosting Automation (git_engine.py)
+requests>=2.31.0
+GitPython>=3.1.40
+
+# Universal File Engine (file_engine.py) & Keyless OCR / Audio Swarm
+pypdf>=4.2.0
+python-docx>=1.1.2
+openpyxl>=3.1.2
+pandas>=2.2.2
+markdownify>=0.12.1
+textract>=1.6.5
+pytesseract>=0.3.10
+opencv-python>=4.9.0.80
+SpeechRecognition>=3.10.4
+openai-whisper>=20231117

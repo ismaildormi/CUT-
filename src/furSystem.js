@@ -48,34 +48,39 @@ function createHairBladeTemplateGeometry(segments = 20) {
 export function createGPUFurSystem(baseGeometry, initialParams) {
   let gpuFurEnabled = initialParams.gpuFurEnabled !== undefined ? Boolean(initialParams.gpuFurEnabled) : true;
 
+  const defaultLen = initialParams.furLength ?? 0.22;
+  const defaultDen = initialParams.furDensity ?? 0.88;
+
   const sharedUniforms = {
     uPhysicsTex: { value: null },
-    uFurLength: { value: initialParams.furLength },
-    uFurDensity: { value: initialParams.furDensity },
-    uClumping: { value: initialParams.clumping },
-    uCurliness: { value: initialParams.curliness ?? 0.32 },
+    uFurLength: { value: defaultLen },
+    uFurDensity: { value: defaultDen },
+    uDensity: { value: defaultDen },
+    uClumping: { value: initialParams.clumping ?? 0.32 },
+    uCurliness: { value: initialParams.curliness ?? 0.22 },
     uBaseColor: { value: new THREE.Color(initialParams.baseColor) },
     uTipColor: { value: new THREE.Color(initialParams.tipColor) },
-    uRoughness: { value: initialParams.roughness },
-    uSpecular: { value: initialParams.specular },
+    uRoughness: { value: initialParams.roughness ?? 0.68 },
+    uSpecular: { value: initialParams.specular ?? 0.24 },
     uKeyLightDir: { value: new THREE.Vector3(0.6, 0.8, 0.7).normalize() },
     uKeyLightColor: { value: new THREE.Color('#fff7ed') },
-    uKeyLightIntensity: { value: initialParams.lightIntensity },
+    uKeyLightIntensity: { value: initialParams.lightIntensity ?? 0.48 },
     uRimLightDir: { value: new THREE.Vector3(-0.6, 0.4, -0.85).normalize() },
     uRimLightColor: { value: new THREE.Color('#c4b5fd') },
-    uRimIntensity: { value: initialParams.rimIntensity },
-    uAmbientIntensity: { value: 0.62 },
+    uRimIntensity: { value: initialParams.rimIntensity ?? 0.38 },
+    uAmbientIntensity: { value: 0.56 },
     uEnvSkyColor: { value: new THREE.Color('#f5d0fe') },
     uEnvGroundColor: { value: new THREE.Color('#1e1b4b') },
     uEnvTintStrength: { value: 0.0 },
     uTime: { value: 0.0 },
-    uWindStrength: { value: initialParams.windStrength },
+    uWindStrength: { value: initialParams.windStrength ?? 0.85 },
     uPointerLocalPos: { value: new THREE.Vector3(0, 0, 2) },
     uPointerActive: { value: 0.0 },
     uGpuFurMode: { value: gpuFurEnabled ? 1.0 : 0.0 },
     uShellCountScale: { value: gpuFurEnabled ? 1.0 : SHELL_COUNT / WEBGL_SHELL_COUNT },
     uWebGLInertia: { value: new THREE.Vector3(0, 0, 0) },
-    uBoopShockwave: { value: 0.0 }
+    uBoopShockwave: { value: 0.0 },
+    uAccessoryBounds: { value: new THREE.Vector4(0.0, 0.0, 0.0, 0.0) }
   };
 
   // ---------------------------------------------------------------------------
@@ -103,8 +108,8 @@ export function createGPUFurSystem(baseGeometry, initialParams) {
     vertexShader: SHELL_VERTEX_SHADER,
     fragmentShader: SHELL_FRAGMENT_SHADER,
     uniforms: sharedUniforms,
-    transparent: false,
-    depthWrite: true,
+    transparent: true,
+    depthWrite: false,
     side: THREE.FrontSide
   });
 
@@ -308,8 +313,8 @@ export function createGPUFurSystem(baseGeometry, initialParams) {
     vertexShader: STRAND_VERTEX_SHADER,
     fragmentShader: STRAND_FRAGMENT_SHADER,
     uniforms: sharedUniforms,
-    transparent: false,
-    depthWrite: true,
+    transparent: true,
+    depthWrite: false,
     side: THREE.DoubleSide
   });
 
@@ -321,6 +326,7 @@ export function createGPUFurSystem(baseGeometry, initialParams) {
   function updateDensity(density) {
     const clamped = Math.max(0.1, Math.min(1.0, density));
     sharedUniforms.uFurDensity.value = clamped;
+    sharedUniforms.uDensity.value = clamped;
     const cap = gpuFurEnabled ? MAX_STRAND_COUNT : WEBGL_STRAND_COUNT;
     strandGeometry.instanceCount = Math.floor(cap * clamped);
   }
@@ -334,12 +340,24 @@ export function createGPUFurSystem(baseGeometry, initialParams) {
     strandGeometry.instanceCount = Math.floor(cap * sharedUniforms.uFurDensity.value);
   }
 
+  function setAccessoryBounds(x, y, z, w) {
+    if (x && typeof x === 'object' && 'isVector4' in x) {
+      sharedUniforms.uAccessoryBounds.value.copy(x);
+    } else if (Array.isArray(x)) {
+      sharedUniforms.uAccessoryBounds.value.set(x[0], x[1], x[2], x[3]);
+    } else {
+      sharedUniforms.uAccessoryBounds.value.set(x || 0, y || 0, z || 0, w || 0);
+    }
+  }
+
   return {
     shellMesh,
     strandMesh,
     sharedUniforms,
+    uniforms: sharedUniforms,
     updateDensity,
     setGPUFurEnabled,
+    setAccessoryBounds,
     isGPUFurEnabled: () => gpuFurEnabled
   };
 }

@@ -29,12 +29,12 @@ const simState = {
   ...FUR_PRESETS[0],
   keyColor: '#fff7ed',
   lightAngle: -74,
-  lightIntensity: 1.05,
-  rimIntensity: 0.95,
+  lightIntensity: 0.52,
+  rimIntensity: 0.45,
   windStrength: 0.95,
-  bloomStrength: 0.35,
-  bloomRadius: 0.45,
-  bloomThreshold: 0.84,
+  bloomStrength: 0.24,
+  bloomRadius: 0.42,
+  bloomThreshold: 0.88,
   environment: 'studio',
   gpuFurEnabled: initialGpuFur
 };
@@ -48,7 +48,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.88;
+renderer.toneMappingExposure = 0.78;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);

@@ -8,6 +8,19 @@
  * - In-app Security Permission Gate modal for guarded OS tools
  */
 
+import {
+  signInGoogleWorkspace,
+  signOutGoogleWorkspace,
+  listDriveFiles,
+  searchDriveFiles,
+  createDriveTextFile,
+  deleteDriveFile,
+  listPresentations,
+  createPresentation,
+  subscribeToWorkspaceAuth,
+  getWorkspaceAccessToken,
+} from './services/googleWorkspace.js';
+
 export function createAIPanel(aiEngine, creature) {
   const existing = document.getElementById('nevea-ai-panel-wrapper');
   if (existing) existing.remove();
@@ -107,6 +120,16 @@ export function createAIPanel(aiEngine, creature) {
           </svg>
           <span>Memory</span>
         </button>
+
+        <button type="button" id="btn-workspace" class="ai-action-btn" title="Google Drive & Slides Workspace" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #a5b4fc;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M7 8h10"/>
+            <path d="M7 12h10"/>
+            <path d="M7 16h10"/>
+          </svg>
+          <span>Workspace</span>
+        </button>
       </div>
 
       <!-- Prompt Input Form -->
@@ -115,7 +138,7 @@ export function createAIPanel(aiEngine, creature) {
           type="text" 
           id="ai-prompt-input" 
           class="ai-input" 
-          placeholder="Ask Nevea (e.g. 'Open Chrome', 'What's on screen?')" 
+          placeholder="Ask Nevea (e.g. 'Search Drive', 'Create slides')" 
           autocomplete="off"
         />
         <button type="submit" class="ai-submit-btn" aria-label="Send">
@@ -128,10 +151,57 @@ export function createAIPanel(aiEngine, creature) {
 
       <!-- Quick Commands -->
       <div class="ai-quick-tags">
+        <button type="button" class="quick-tag" data-cmd="List my Google Drive files">📂 Drive Files</button>
+        <button type="button" class="quick-tag" data-cmd="Create a Google Slide presentation about Space Exploration">📊 Slides Deck</button>
         <button type="button" class="quick-tag" data-cmd="Inspect my screen and tell me what you see">👁️ See Screen</button>
         <button type="button" class="quick-tag" data-cmd="Open Google Chrome">🌐 Launch App</button>
-        <button type="button" class="quick-tag" data-cmd="Remember that my favorite dessert is Japanese mochi">🧠 Save Fact</button>
-        <button type="button" class="quick-tag" data-cmd="What are my saved personal preferences?">🔍 Recall</button>
+      </div>
+
+      <!-- Google Workspace (Drive & Slides) Drawer -->
+      <div id="ai-workspace-drawer" class="ai-memory-drawer" style="display: none;">
+        <div class="memory-header">
+          <div class="memory-title-wrap">
+            <h4>Google Workspace</h4>
+            <span class="memory-active-badge" id="ws-auth-badge" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #c7d2fe;">DRIVE & SLIDES</span>
+          </div>
+          <button type="button" id="close-workspace-btn" class="close-btn">&times;</button>
+        </div>
+        <div id="workspace-content" class="memory-list" style="display: flex; flex-direction: column; gap: 8px;">
+          <div id="ws-auth-section" style="padding: 4px 0;">
+            <button type="button" id="btn-ws-connect" class="modal-btn confirm" style="width: 100%; justify-content: center; font-size: 11px; padding: 8px;">Connect Google Drive & Slides</button>
+          </div>
+          <div id="ws-active-section" style="display: none; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <span id="ws-user-display" style="font-size: 10px; color: #38bdf8; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">Connected</span>
+              <button type="button" id="btn-ws-signout" style="background: none; border: none; color: #f87171; font-size: 10px; cursor: pointer;">Sign Out</button>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" id="ws-tab-drive" class="state-chip active" style="flex: 1; font-size: 10px; padding: 4px;">Google Drive</button>
+              <button type="button" id="ws-tab-slides" class="state-chip" style="flex: 1; font-size: 10px; padding: 4px;">Google Slides</button>
+            </div>
+            <div id="ws-drive-view" style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; gap: 4px;">
+                <input type="text" id="ws-drive-search" class="ai-input" placeholder="Search Drive..." style="font-size: 11px; padding: 4px 8px; height: 26px;" />
+                <button type="button" id="btn-ws-search" class="quick-tag" style="padding: 2px 8px;">Search</button>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <button type="button" id="btn-ws-new-doc" class="quick-tag" style="background: rgba(14, 165, 233, 0.2); border-color: rgba(14, 165, 233, 0.4); color: #bae6fd;">+ New Note in Drive</button>
+              </div>
+              <div id="ws-drive-files-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto;">
+                Loading Drive files...
+              </div>
+            </div>
+            <div id="ws-slides-view" style="display: none; flex-direction: column; gap: 6px;">
+              <div style="display: flex; gap: 4px;">
+                <input type="text" id="ws-slide-title" class="ai-input" placeholder="Deck Title (e.g. AI Deck)" style="font-size: 11px; padding: 4px 8px; height: 26px;" />
+                <button type="button" id="btn-ws-create-deck" class="quick-tag" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); color: #fcd34d;">+ Create Deck</button>
+              </div>
+              <div id="ws-slides-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto;">
+                Loading presentations...
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ChromaDB Memory Drawer -->
@@ -338,6 +408,211 @@ export function createAIPanel(aiEngine, creature) {
 
   closeMemoryBtn.addEventListener('click', () => {
     memoryDrawer.style.display = 'none';
+  });
+
+  // --------------------------------------------------------------------------
+  // 3b. Google Workspace (Drive & Slides) Drawer Handlers
+  // --------------------------------------------------------------------------
+  const btnWorkspace = wrapper.querySelector('#btn-workspace');
+  const workspaceDrawer = wrapper.querySelector('#ai-workspace-drawer');
+  const closeWorkspaceBtn = wrapper.querySelector('#close-workspace-btn');
+  const btnWsConnect = wrapper.querySelector('#btn-ws-connect');
+  const btnWsSignout = wrapper.querySelector('#btn-ws-signout');
+  const wsAuthSection = wrapper.querySelector('#ws-auth-section');
+  const wsActiveSection = wrapper.querySelector('#ws-active-section');
+  const wsUserDisplay = wrapper.querySelector('#ws-user-display');
+  const wsAuthBadge = wrapper.querySelector('#ws-auth-badge');
+  const wsTabDrive = wrapper.querySelector('#ws-tab-drive');
+  const wsTabSlides = wrapper.querySelector('#ws-tab-slides');
+  const wsDriveView = wrapper.querySelector('#ws-drive-view');
+  const wsSlidesView = wrapper.querySelector('#ws-slides-view');
+  const wsDriveFilesList = wrapper.querySelector('#ws-drive-files-list');
+  const wsSlidesList = wrapper.querySelector('#ws-slides-list');
+  const wsDriveSearch = wrapper.querySelector('#ws-drive-search');
+  const btnWsSearch = wrapper.querySelector('#btn-ws-search');
+  const btnWsNewDoc = wrapper.querySelector('#btn-ws-new-doc');
+  const wsSlideTitle = wrapper.querySelector('#ws-slide-title');
+  const btnWsCreateDeck = wrapper.querySelector('#btn-ws-create-deck');
+
+  async function refreshWorkspaceUI() {
+    if (!getWorkspaceAccessToken()) return;
+    try {
+      const [driveFiles, presentations] = await Promise.all([
+        listDriveFiles(10).catch(() => []),
+        listPresentations(10).catch(() => []),
+      ]);
+
+      if (driveFiles.length > 0) {
+        wsDriveFilesList.innerHTML = driveFiles
+          .map(
+            (f) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11px;">
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;" title="${f.name}">${f.name}</span>
+            <div style="display: flex; gap: 4px;">
+              ${f.webViewLink ? `<a href="${f.webViewLink}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: none;">Open</a>` : ''}
+              <button type="button" class="del-file-btn" data-id="${f.id}" data-name="${f.name}" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 10px;">Del</button>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+
+        wsDriveFilesList.querySelectorAll('.del-file-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const fileId = btn.getAttribute('data-id');
+            const fileName = btn.getAttribute('data-name');
+            const confirmed = await window.neveaRequestPermission(
+              'delete_file',
+              `Permanently delete "${fileName}" from Google Drive`
+            );
+            if (confirmed) {
+              await deleteDriveFile(fileId).catch((err) => alert(err.message));
+              refreshWorkspaceUI();
+            }
+          });
+        });
+      } else {
+        wsDriveFilesList.innerHTML = '<span style="font-size: 10px; color: #94a3b8; font-style: italic;">No files found in Drive</span>';
+      }
+
+      if (presentations.length > 0) {
+        wsSlidesList.innerHTML = presentations
+          .map(
+            (p) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11px;">
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;" title="${p.name}">📊 ${p.name}</span>
+            ${p.webViewLink ? `<a href="${p.webViewLink}" target="_blank" rel="noopener noreferrer" style="color: #fcd34d; text-decoration: none;">Edit</a>` : ''}
+          </div>
+        `
+          )
+          .join('');
+      } else {
+        wsSlidesList.innerHTML = '<span style="font-size: 10px; color: #94a3b8; font-style: italic;">No presentations found. Click "+ Create Deck"</span>';
+      }
+    } catch (err) {
+      console.warn('Workspace refresh error:', err);
+    }
+  }
+
+  subscribeToWorkspaceAuth((state) => {
+    if (state.isAuthenticated && state.hasToken) {
+      wsAuthSection.style.display = 'none';
+      wsActiveSection.style.display = 'flex';
+      wsUserDisplay.textContent = state.user?.displayName || state.user?.email || 'Connected';
+      wsAuthBadge.textContent = 'CONNECTED';
+      wsAuthBadge.style.color = '#34d399';
+      refreshWorkspaceUI();
+    } else {
+      wsAuthSection.style.display = 'block';
+      wsActiveSection.style.display = 'none';
+      wsAuthBadge.textContent = 'DISCONNECTED';
+      wsAuthBadge.style.color = '#94a3b8';
+    }
+  });
+
+  btnWorkspace.addEventListener('click', () => {
+    const isHidden = workspaceDrawer.style.display === 'none';
+    workspaceDrawer.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      memoryDrawer.style.display = 'none';
+      refreshWorkspaceUI();
+    }
+  });
+
+  closeWorkspaceBtn.addEventListener('click', () => {
+    workspaceDrawer.style.display = 'none';
+  });
+
+  btnWsConnect.addEventListener('click', async () => {
+    try {
+      await signInGoogleWorkspace();
+      bubble.textContent = "Connected to your Google Drive and Slides! What would you like to create or find?";
+    } catch (err) {
+      alert(err.message || 'Connection failed');
+    }
+  });
+
+  btnWsSignout.addEventListener('click', async () => {
+    await signOutGoogleWorkspace();
+    bubble.textContent = "Signed out of Google Workspace.";
+  });
+
+  wsTabDrive.addEventListener('click', () => {
+    wsTabDrive.classList.add('active');
+    wsTabSlides.classList.remove('active');
+    wsDriveView.style.display = 'flex';
+    wsSlidesView.style.display = 'none';
+  });
+
+  wsTabSlides.addEventListener('click', () => {
+    wsTabSlides.classList.add('active');
+    wsTabDrive.classList.remove('active');
+    wsSlidesView.style.display = 'flex';
+    wsDriveView.style.display = 'none';
+  });
+
+  btnWsSearch.addEventListener('click', async () => {
+    const q = wsDriveSearch.value.trim();
+    if (!q) return refreshWorkspaceUI();
+    wsDriveFilesList.innerHTML = 'Searching...';
+    try {
+      const results = await searchDriveFiles(q);
+      if (results.length > 0) {
+        wsDriveFilesList.innerHTML = results
+          .map(
+            (f) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11px;">
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;" title="${f.name}">${f.name}</span>
+            ${f.webViewLink ? `<a href="${f.webViewLink}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: none;">Open</a>` : ''}
+          </div>
+        `
+          )
+          .join('');
+      } else {
+        wsDriveFilesList.innerHTML = '<span style="font-size: 10px; color: #94a3b8; font-style: italic;">No matching files</span>';
+      }
+    } catch (err) {
+      wsDriveFilesList.innerHTML = `<span style="color: #f87171; font-size: 10px;">${err.message}</span>`;
+    }
+  });
+
+  btnWsNewDoc.addEventListener('click', async () => {
+    const title = prompt('Enter document name (e.g. "Meeting Notes.txt"):', 'Nevea_Note.txt');
+    if (!title) return;
+    const content = prompt('Enter notes content:', 'Created with Nevea 3D Desktop Companion.');
+    if (content === null) return;
+    try {
+      const res = await createDriveTextFile(title, content);
+      bubble.textContent = `Created "${res.name}" in your Google Drive!`;
+      refreshWorkspaceUI();
+    } catch (err) {
+      alert(err.message || 'Failed to create document');
+    }
+  });
+
+  btnWsCreateDeck.addEventListener('click', async () => {
+    const title = wsSlideTitle.value.trim() || 'Nevea AI Deck';
+    wsSlideTitle.value = '';
+    bubble.textContent = `Creating presentation "${title}" in Google Slides...`;
+    try {
+      const sampleSlides = [
+        {
+          title: title,
+          subtitle: 'Created autonomously by Nevea 3D Companion',
+          bullets: ['Connected to Google Slides API', 'Real-time sync', 'Multi-modal desktop agent'],
+        },
+        {
+          title: 'Capabilities',
+          subtitle: 'Full Desktop & Cloud Integration',
+          bullets: ['Google Drive storage', 'Google Slides automation', 'Physical 3D Marschner fur companion'],
+        },
+      ];
+      const res = await createPresentation(title, sampleSlides);
+      bubble.textContent = `Created presentation "${res.title}" in Google Slides! Link ready.`;
+      refreshWorkspaceUI();
+    } catch (err) {
+      alert(err.message || 'Failed to create presentation');
+    }
   });
 
   // --------------------------------------------------------------------------

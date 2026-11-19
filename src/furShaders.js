@@ -1,12 +1,16 @@
 // Physical Hair BSDF (Marschner / Kajiya-Kay Dual-Specular + TT Scatter + Volumetric Self-Shadowing)
 // and Hybrid GPU Fur Shaders (64-Layer Volumetric Shells + 60,000 3D Tapered Instanced Strands)
 
+export const DEFAULT_FUR_LENGTH = 0.22;
+export const DEFAULT_FUR_DENSITY = 0.88;
+
 const COMMON_HAIR_BSDF_GLSL = /* glsl */ `
   uniform vec3 uBaseColor;
   uniform vec3 uTipColor;
   uniform float uRoughness;
   uniform float uSpecular;
   uniform float uFurDensity;
+  uniform float uDensity;
   uniform vec3 uKeyLightDir;
   uniform vec3 uKeyLightColor;
   uniform float uKeyLightIntensity;
@@ -33,7 +37,7 @@ const COMMON_HAIR_BSDF_GLSL = /* glsl */ `
     float exponent = mix(220.0, 10.0, clamp(roughness * roughness, 0.0, 1.0));
     // Energy-conserving normalization factor
     float normFactor = (exponent + 2.0) / 8.0;
-    return hemiVis * pow(sinTH, exponent) * normFactor * 0.095;
+    return hemiVis * pow(sinTH, exponent) * normFactor * 0.078;
   }
 
   // Evaluate complete Physical Hair Shading (R + TRT + TT + Beer-Lambert Deep Shadow + Follicle AO)
@@ -50,54 +54,54 @@ const COMMON_HAIR_BSDF_GLSL = /* glsl */ `
     vec3 V = normalize(cameraPosition - worldPos);
     vec3 L = normalize(uKeyLightDir);
     vec3 Lrim = normalize(uRimLightDir);
+    float activeDensity = max(uFurDensity, uDensity);
 
-    // 1. Root-to-Tip Melanin / Pigment Gradient with headroom for highlights
-    float rootTipMix = smoothstep(0.05, 0.92, pow(h, 0.82));
-    vec3 strandTint = mix(vec3(0.92), vec3(1.04), fract(strandSeed * 13.37));
-    // Scale albedo to 0.88 max so white fur leaves headroom for Marschner specular caustics
-    vec3 albedo = mix(uBaseColor * 0.86, uTipColor * 0.90, rootTipMix) * strandTint;
+    // 1. Root-to-Tip Melanin / Pigment Gradient with crisp micro-strand contrast
+    float rootTipMix = smoothstep(0.06, 0.94, pow(h, 0.85));
+    vec3 strandTint = mix(vec3(0.84), vec3(1.03), fract(strandSeed * 19.73));
+    vec3 albedo = mix(uBaseColor * 0.80, uTipColor * 0.86, rootTipMix) * strandTint;
 
-    // 2. Follicle Ambient Occlusion (rich, deep volumetric shadow near skin roots)
-    float follicleAO = mix(0.18, 1.0, pow(clamp(h, 0.0, 1.0), 0.70));
+    // 2. Follicle Ambient Occlusion (crisp, deep shadow near skin roots for strand definition)
+    float follicleAO = mix(0.14, 1.0, pow(clamp(h, 0.0, 1.0), 0.78));
 
     // 3. Beer-Lambert Volumetric Hair Self-Shadowing (optical depth through coat)
     float NdotL = dot(N, L);
-    float opticalDepth = (1.0 - h) * (0.50 + 0.60 * uFurDensity) / max(0.20, NdotL * 0.5 + 0.55);
-    float deepShadow = exp(-opticalDepth * 1.55);
-    float wrapDiffuse = clamp((NdotL + 0.40) / 1.40, 0.0, 1.0);
+    float opticalDepth = (1.0 - h) * (0.55 + 0.65 * activeDensity) / max(0.22, NdotL * 0.5 + 0.55);
+    float deepShadow = exp(-opticalDepth * 1.65);
+    float wrapDiffuse = clamp((NdotL + 0.35) / 1.35, 0.0, 1.0);
 
     // 4. Primary Specular Lobe (R): Cuticle surface reflection shifted toward root (-0.16 rad)
-    float sheenBoost = 1.0 + combMemory * 0.35;
+    float sheenBoost = 1.0 + combMemory * 0.30;
     vec3 tPrimary = shiftTangent(T, N, -0.16 + (strandSeed - 0.5) * 0.05);
     float specR = hairSpecularLobe(tPrimary, N, V, L, uRoughness) * uSpecular * sheenBoost;
-    vec3 colorR = clamp(specR * uKeyLightColor * mix(vec3(0.85), albedo, 0.15), 0.0, 1.2);
+    vec3 colorR = clamp(specR * uKeyLightColor * mix(vec3(0.82), albedo, 0.18), 0.0, 0.95);
 
     // 5. Secondary Specular Lobe (TRT): Internal reflection shifted toward tip (+0.24 rad), tinted by pigment
     vec3 tSecondary = shiftTangent(T, N, 0.24 + (strandSeed - 0.5) * 0.08);
     float glint = 0.75 + 0.5 * sin(strandSeed * 62.83);
-    float specTRT = hairSpecularLobe(tSecondary, N, V, L, min(1.0, uRoughness * 1.35)) * uSpecular * 0.85 * glint;
-    vec3 colorTRT = clamp(specTRT * mix(albedo, uTipColor, 0.65) * uKeyLightColor * 1.45, 0.0, 1.4);
+    float specTRT = hairSpecularLobe(tSecondary, N, V, L, min(1.0, uRoughness * 1.35)) * uSpecular * 0.75 * glint;
+    vec3 colorTRT = clamp(specTRT * mix(albedo, uTipColor, 0.65) * uKeyLightColor * 1.15, 0.0, 1.05);
 
     // 6. Forward Subsurface Scattering / Transmission Lobe (TT) from Key + Rim Backlights
-    float forwardKey = pow(clamp(dot(V, -L + N * 0.35), 0.0, 1.0), 3.2);
-    float forwardRim = pow(clamp(dot(V, -Lrim + N * 0.4), 0.0, 1.0), 2.4);
-    float fresnelRim = pow(1.0 - max(0.0, dot(N, V)), 2.6);
+    float forwardKey = pow(clamp(dot(V, -L + N * 0.35), 0.0, 1.0), 3.4);
+    float forwardRim = pow(clamp(dot(V, -Lrim + N * 0.4), 0.0, 1.0), 2.6);
+    float fresnelRim = pow(1.0 - max(0.0, dot(N, V)), 2.8);
     vec3 scatterTT = (
-      forwardKey * uKeyLightColor * 0.32 +
-      (forwardRim * 0.65 + fresnelRim * 0.55) * uRimLightColor * uRimIntensity
-    ) * mix(uBaseColor, uTipColor, 0.75) * (0.30 + 0.70 * h);
+      forwardKey * uKeyLightColor * 0.22 +
+      (forwardRim * 0.48 + fresnelRim * 0.42) * uRimLightColor * uRimIntensity
+    ) * mix(uBaseColor, uTipColor, 0.72) * (0.25 + 0.75 * h);
 
     // 7. Soft Hemisphere Studio & 3D Environment Fill Lighting
-    vec3 baseSkyColor = mix(uTipColor, vec3(0.82, 0.88, 0.98), 0.65);
-    vec3 baseGroundColor = uBaseColor * 0.32;
+    vec3 baseSkyColor = mix(uTipColor, vec3(0.80, 0.86, 0.96), 0.65);
+    vec3 baseGroundColor = uBaseColor * 0.28;
     vec3 skyColor = mix(baseSkyColor, uEnvSkyColor, uEnvTintStrength);
     vec3 groundColor = mix(baseGroundColor, uEnvGroundColor, uEnvTintStrength);
     vec3 hemiFill = mix(groundColor, skyColor, N.y * 0.5 + 0.5) * uAmbientIntensity;
 
-    // Combine all physical lobes while preserving soft gradients & avoiding washed-out blowout
+    // Combine all physical lobes while preserving crisp fiber separation & zero blowout
     vec3 balancedKeyTint = mix(vec3(1.0), uKeyLightColor, 0.55);
-    vec3 directDiffuse = albedo * balancedKeyTint * (uKeyLightIntensity * 0.88) * wrapDiffuse * deepShadow;
-    vec3 directSpec = (colorR + colorTRT) * (uKeyLightIntensity * 0.82) * deepShadow * (0.20 + 0.80 * h);
+    vec3 directDiffuse = albedo * balancedKeyTint * (uKeyLightIntensity * 0.82) * wrapDiffuse * deepShadow;
+    vec3 directSpec = (colorR + colorTRT) * (uKeyLightIntensity * 0.74) * deepShadow * (0.20 + 0.80 * h);
     vec3 ambientTerm = albedo * hemiFill * follicleAO;
 
     return directDiffuse + directSpec + scatterTT + ambientTerm;
@@ -121,6 +125,7 @@ export const SHELL_VERTEX_SHADER = /* glsl */ `
   uniform float uShellCountScale;
   uniform vec3 uWebGLInertia;
   uniform float uBoopShockwave;
+  uniform vec4 uAccessoryBounds;
 
   varying float vLayerHeight;
   varying float vFollicleMask;
@@ -196,6 +201,15 @@ export const SHELL_VERTEX_SHADER = /* glsl */ `
 
     float effectiveLen = uFurLength * aFollicleMask;
 
+    // Flatten fur underneath hats, helmets, and crowns to prevent clipping (10% length)
+    if (uAccessoryBounds.w > 0.01) {
+      float dAcc = distance(position, uAccessoryBounds.xyz);
+      if (dAcc < uAccessoryBounds.w) {
+        float flattenFactor = mix(0.10, 1.0, smoothstep(uAccessoryBounds.w * 0.70, uAccessoryBounds.w, dAcc));
+        effectiveLen *= flattenFactor;
+      }
+    }
+
     // Spatially coherent smooth wave/curl field shared across adjacent locks
     float lockPhase = dot(position, vec3(5.4, 6.2, 5.0));
     float curlFreq = mix(3.2, 7.8, uCurliness);
@@ -264,24 +278,25 @@ export const SHELL_FRAGMENT_SHADER = /* glsl */ `
       discard;
     }
 
-    // 2D surface-locked follicle coordinates (no 3D Cartesian Z-slicing or contour bands)
-    float gridScale = mix(52.0, 96.0, clamp(uFurDensity, 0.0, 1.0));
+    // 2D surface-locked follicle coordinates (crisp high-frequency fiber separation)
+    float activeDensity = max(uFurDensity, uDensity);
+    float gridScale = mix(76.0, 128.0, clamp(activeDensity, 0.0, 1.0));
     vec2 baseUV = octahedralUV(normalize(vLocalPos));
-    vec2 warpedUV = baseUV + 0.008 * sin(baseUV.yx * 28.0);
+    vec2 warpedUV = baseUV + 0.006 * sin(baseUV.yx * 32.0);
     vec2 sampleUV = warpedUV * gridScale;
 
     // Clumping: pull 2D surface coordinates toward macro-tuft centers as h -> 1
-    vec2 clumpGrid = warpedUV * (gridScale * 0.24);
+    vec2 clumpGrid = warpedUV * (gridScale * 0.26);
     vec2 clumpFract = fract(clumpGrid) - 0.5;
-    sampleUV -= clumpFract * (vLayerHeight * uClumping * 1.65);
+    sampleUV -= clumpFract * (vLayerHeight * uClumping * 1.45);
 
     vec2 cellId = floor(sampleUV);
     vec2 cellLocal = fract(sampleUV) - 0.5;
     vec3 rand = hash23(cellId);
 
     // Smooth per-fiber height taper instead of binary salt-and-pepper cell holes
-    float densityFactor = clamp(uFurDensity * 1.08, 0.22, 1.0) * clamp(vFollicleMask * 1.15, 0.0, 1.0);
-    float fiberMaxH = mix(0.32, 1.0, rand.z) * densityFactor;
+    float densityFactor = clamp(activeDensity * 1.05, 0.25, 1.0) * clamp(vFollicleMask * 1.15, 0.0, 1.0);
+    float fiberMaxH = mix(0.36, 1.0, rand.z) * densityFactor;
     if (vLayerHeight > fiberMaxH) {
       discard;
     }
@@ -290,13 +305,13 @@ export const SHELL_FRAGMENT_SHADER = /* glsl */ `
     float curlFreq = mix(3.2, 7.8, uCurliness);
     float curlAngle = vLayerHeight * curlFreq + rand.x * 6.28318;
     float smoothEnv = vLayerHeight * vLayerHeight * (3.0 - 2.0 * vLayerHeight);
-    float curlRadius = (0.03 * uClumping + 0.12 * uCurliness) * smoothEnv;
-    vec2 strandCenter = (rand.xy - 0.5) * 0.22 + vec2(cos(curlAngle), sin(curlAngle)) * curlRadius;
+    float curlRadius = (0.025 * uClumping + 0.095 * uCurliness) * smoothEnv;
+    vec2 strandCenter = (rand.xy - 0.5) * 0.20 + vec2(cos(curlAngle), sin(curlAngle)) * curlRadius;
     float distToAxis = length(cellLocal - strandCenter);
 
-    // Conical hair profile tapering smoothly from plush solid undercoat to fine tip
+    // Crisp conical hair profile tapering smoothly from plush undercoat to fine tip
     float normH = clamp(vLayerHeight / max(0.15, fiberMaxH), 0.0, 1.0);
-    float maxRadius = 0.62 * (1.0 - pow(normH, 1.25));
+    float maxRadius = 0.46 * (1.0 - pow(normH, 1.18));
     if (distToAxis > maxRadius) {
       discard;
     }
@@ -325,6 +340,7 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
   uniform sampler2D uPhysicsTex;
   uniform float uFurLength;
   uniform float uFurDensity;
+  uniform float uDensity;
   uniform float uClumping;
   uniform float uCurliness;
   uniform float uTime;
@@ -334,6 +350,7 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
   uniform float uGpuFurMode;
   uniform vec3 uWebGLInertia;
   uniform float uBoopShockwave;
+  uniform vec4 uAccessoryBounds;
 
   varying float vHeight;
   varying float vRibbonU;
@@ -355,9 +372,10 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
     vHeight = h;
     vRibbonU = position.x; // [-1..1] across ribbon width
     vStrandSeed = aStrandSeed;
+    float activeDensity = max(uFurDensity, uDensity);
 
     // Density culling in vertex shader (collapse inactive strands to zero area)
-    if (aStrandSeed > uFurDensity || aMaskValue < 0.05) {
+    if (aStrandSeed > activeDensity || aMaskValue < 0.05) {
       gl_Position = vec4(2.0, 2.0, 2.0, 0.0);
       return;
     }
@@ -393,8 +411,17 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
       }
     }
 
-    float lenVariation = 0.82 + 0.36 * fract(aStrandSeed * 17.31);
-    float totalLen = uFurLength * aMaskValue * lenVariation * 1.15;
+    float lenVariation = 0.84 + 0.32 * fract(aStrandSeed * 17.31);
+    float totalLen = uFurLength * aMaskValue * lenVariation * 1.05;
+
+    // Flatten fur underneath hats, helmets, and crowns to prevent clipping (10% length)
+    if (uAccessoryBounds.w > 0.01) {
+      float dAcc = distance(aRootPos, uAccessoryBounds.xyz);
+      if (dAcc < uAccessoryBounds.w) {
+        float flattenFactor = mix(0.10, 1.0, smoothstep(uAccessoryBounds.w * 0.70, uAccessoryBounds.w, dAcc));
+        totalLen *= flattenFactor;
+      }
+    }
 
     // Smooth cantilever bend along the hair shaft
     float bend = pow(h, 1.55);
@@ -423,7 +450,7 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
     float spiralAngle = h * curlFreq + coherentPhase;
 
     // Zero offset at root (h=0) via smoothEnv, building into soft S-waves & ringlets
-    float curlAmp = uCurliness * totalLen * 0.34 * smoothEnv;
+    float curlAmp = uCurliness * totalLen * 0.30 * smoothEnv;
     vec3 curlOffset =
       sideVec * (sin(spiralAngle) - sin(coherentPhase)) * curlAmp +
       G * (cos(spiralAngle) - cos(coherentPhase)) * (curlAmp * 0.65);
@@ -432,22 +459,22 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
     vec3 curlTangent =
       (sideVec * cos(spiralAngle) - G * sin(spiralAngle) * 0.65) * (curlAmp * curlFreq);
 
-    vec3 clumpPull = aClumpOffset * (smoothEnv * uClumping * totalLen * 0.68);
+    vec3 clumpPull = aClumpOffset * (smoothEnv * uClumping * totalLen * 0.62);
 
     vec3 spineLocal =
       aRootPos +
       N * (h * totalLen) +
-      G * (bend * totalLen * 0.34) +
+      G * (bend * totalLen * 0.32) +
       clumpPull +
       curlOffset +
-      (gpuDisp * 0.48 + windWave + pointerPush) * bend * totalLen;
+      (gpuDisp * 0.44 + windWave + pointerPush) * bend * totalLen;
 
     vec3 localTangent = normalize(
       N * totalLen +
-      G * (1.55 * pow(max(0.05, h), 0.55) * totalLen * 0.34) +
+      G * (1.55 * pow(max(0.05, h), 0.55) * totalLen * 0.32) +
       clumpPull * 1.15 +
       curlTangent +
-      (gpuDisp * 0.48 + windWave + pointerPush) * 1.55 * pow(max(0.05, h), 0.55)
+      (gpuDisp * 0.44 + windWave + pointerPush) * 1.55 * pow(max(0.05, h), 0.55)
     );
 
     vec3 worldSpine = (modelMatrix * vec4(spineLocal, 1.0)).xyz;
@@ -459,12 +486,11 @@ export const STRAND_VERTEX_SHADER = /* glsl */ `
     vec3 viewDir = normalize(cameraPosition - worldSpine);
     vec3 billboardRight = normalize(cross(worldTangent, viewDir) + vec3(1e-5, 0.0, 0.0));
 
-    // Taper strand ribbon width smoothly from root to fine tip (scaled by modelMatrix scale)
-    // In WebGL mode (fewer instances), slightly wider plush ribbons ensure 100% seamless coat coverage
+    // Taper strand ribbon width smoothly from root to fine tip for crisp individual fibers
     float modelScale = length(modelMatrix[0].xyz);
-    float modeWidthBoost = mix(1.38, 1.0, uGpuFurMode);
-    float baseWidth = 0.0145 * modeWidthBoost * (0.82 + 0.38 * (1.0 - uFurDensity)) * modelScale;
-    float width = baseWidth * (1.0 - pow(h, 1.35));
+    float modeWidthBoost = mix(1.22, 1.0, uGpuFurMode);
+    float baseWidth = 0.0095 * modeWidthBoost * (0.85 + 0.30 * (1.0 - activeDensity)) * modelScale;
+    float width = baseWidth * (1.0 - pow(h, 1.28));
 
     vec3 finalWorld = worldSpine + billboardRight * (position.x * width);
     vWorldPos = finalWorld;

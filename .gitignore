@@ -1,0 +1,30 @@
+# Dependencies & Build Outputs
+node_modules/
+dist/
+dist-ssr/
+release/
+*.local
+
+# Environment & Secrets (Never commit real keys or local vaults)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.nevea_local_vault.key
+workspace/
+
+# Local Backups, Plans, Logs & ChromaDB
+Nevea_Backup/
+Nevea_Plans/
+.nevea_chroma_db/
+.nevea_voices/
+__pycache__/
+*.pyc
+*.sqlite
+*.db
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+*.log

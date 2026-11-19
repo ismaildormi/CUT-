@@ -10,6 +10,6 @@
     "jsx": "react-jsx",
     "isolatedModules": true
   },
-  "include": ["src", "vite.config.ts"],
+  "include": ["src", "server", "server.ts", "vite.config.ts"],
   "exclude": ["node_modules", "dist", "vendor"]
 }

@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "resources": [
+    {
+      "id": "nevea-system-doctor",
+      "name": "Nevea System Doctor",
+      "version": "1.2.0",
+      "author": "Nevea Core Team",
+      "description": "Autonomous diagnostics for GPU, CPU, RAM and dangling zombie process cleanup.",
+      "license": "MIT",
+      "capabilities": [
+        "system_metrics",
+        "process_inspection"
+      ],
+      "sha256": "8f4e2b1a9c3d5e7f0b2a4c6e8d0f1a3b5c7e9f1a3b5c7e9f1a3b5c7e9f1a3b5c",
+      "entrypoint": "doctor.py",
+      "code": "import sys, json\nprint(json.dumps({'status': 'healthy', 'diagnostics': 'clean'}))\n",
+      "enabled": true,
+      "verified": true,
+      "installed_at": 1793570000000
+    },
+    {
+      "id": "playwright-harvester",
+      "name": "Playwright Documentation Harvester",
+      "version": "2.0.1",
+      "author": "Open-Source Community",
+      "description": "Headless web scraper for technical documentation, tutorials, and API references.",
+      "license": "Apache-2.0",
+      "capabilities": [
+        "network_access",
+        "headless_browser"
+      ],
+      "sha256": "4b6e8d0f1a3b5c7e9f1a3b5c7e9f1a3b8f4e2b1a9c3d5e7f0b2a4c6e8d0f1a3b",
+      "entrypoint": "harvester.py",
+      "code": "import sys, json\nprint(json.dumps({'status': 'success', 'scraped_snippets': 3}))\n",
+      "enabled": true,
+      "verified": true,
+      "installed_at": 1793571000000
+    },
+    {
+      "id": "test-tool-1793577908568",
+      "name": "Test Verification Plugin",
+      "version": "1.0.0",
+      "author": "Verification Suite",
+      "description": "Auto-verified community test plugin",
+      "license": "MIT",
+      "capabilities": [
+        "test"
+      ],
+      "sha256": "2db99d23c33fb320ae024f04f7518d9fbabd3cc630b08a6c2bf4eb080e586fa8",
+      "entrypoint": "test-tool-1793577908568.py",
+      "code": "import sys, json\nprint(json.dumps({\"test\": \"passed\"}))\n",
+      "enabled": true,
+      "verified": true,
+      "installed_at": 1793577908686
+    },
+    {
+      "id": "test-tool-1793577940965",
+      "name": "Test Verification Plugin",
+      "version": "1.0.0",
+      "author": "Verification Suite",
+      "description": "Auto-verified community test plugin",
+      "license": "MIT",
+      "capabilities": [
+        "test"
+      ],
+      "sha256": "2db99d23c33fb320ae024f04f7518d9fbabd3cc630b08a6c2bf4eb080e586fa8",
+      "entrypoint": "test-tool-1793577940965.py",
+      "code": "import sys, json\nprint(json.dumps({\"test\": \"passed\"}))\n",
+      "enabled": true,
+      "verified": true,
+      "installed_at": 1793577941070
+    },
+    {
+      "id": "test-tool-1793578014497",
+      "name": "Test Verification Plugin",
+      "version": "1.0.0",
+      "author": "Verification Suite",
+      "description": "Auto-verified community test plugin",
+      "license": "MIT",
+      "capabilities": [
+        "test"
+      ],
+      "sha256": "2db99d23c33fb320ae024f04f7518d9fbabd3cc630b08a6c2bf4eb080e586fa8",
+      "entrypoint": "test-tool-1793578014497.py",
+      "code": "import sys, json\nprint(json.dumps({\"test\": \"passed\"}))\n",
+      "enabled": true,
+      "verified": true,
+      "installed_at": 1793578014604
+    }
+  ]
+}

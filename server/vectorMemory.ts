@@ -46,7 +46,16 @@ class LocalVectorStore {
   }
 
   public async store(key: string, content: string): Promise<MemoryItem> {
-    const id = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    // Upsert if an entry with the same key already exists
+    let existingId: string | null = null;
+    for (const [id, entry] of this.memories.entries()) {
+      if (entry.key === key) {
+        existingId = id;
+        break;
+      }
+    }
+
+    const id = existingId || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const item: MemoryItem = {
       id,
       key,
@@ -57,6 +66,18 @@ class LocalVectorStore {
     this.memories.set(id, item);
     this.save();
     return item;
+  }
+
+  public deleteByKey(key: string): boolean {
+    let removed = false;
+    for (const [id, entry] of this.memories.entries()) {
+      if (entry.key === key || id === key) {
+        this.memories.delete(id);
+        removed = true;
+      }
+    }
+    if (removed) this.save();
+    return removed;
   }
 
   public async query(queryText: string, limit: number = 4): Promise<MemoryItem[]> {

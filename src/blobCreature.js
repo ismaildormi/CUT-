@@ -334,16 +334,31 @@ export function createBlobCreature() {
   nose.position.set(0, 0.075, 1.05);
   faceGroup.add(nose);
 
-  // Cute W-mouth made from two torus arcs
+  // Cute W-mouth + audio-reactive lip-sync mouth group (squash & stretch via mouthScale)
+  const mouthGroup = new THREE.Group();
+  mouthGroup.position.set(0, 0.035, 1.045);
+  faceGroup.add(mouthGroup);
+
   const mouthMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#3a102e') });
+  const mouthArcs = [];
   for (const side of [-1, 1]) {
     const arcGeo = new THREE.TorusGeometry(0.046, 0.013, 10, 20, Math.PI * 0.92);
     const arc = new THREE.Mesh(arcGeo, mouthMat);
-    arc.position.set(side * 0.043, 0.035, 1.045);
+    arc.position.set(side * 0.043, 0, 0);
     arc.rotation.x = Math.PI + 0.15;
     arc.rotation.y = side * 0.14;
-    faceGroup.add(arc);
+    mouthGroup.add(arc);
+    mouthArcs.push(arc);
   }
+
+  // Inner mouth cavity for open-mouth vowel shapes during lip-sync
+  const cavityGeo = new THREE.SphereGeometry(0.038, 16, 12);
+  cavityGeo.scale(1.15, 0.85, 0.45);
+  const cavityMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#581845') });
+  const mouthCavity = new THREE.Mesh(cavityGeo, cavityMat);
+  mouthCavity.position.set(0, -0.012, -0.008);
+  mouthCavity.scale.set(0.01, 0.01, 0.01);
+  mouthGroup.add(mouthCavity);
 
   // Animation & physics state for creature motion (coupled to GPGPU fur inertia)
   const animState = {
@@ -360,12 +375,14 @@ export function createBlobCreature() {
     velocity: new THREE.Vector3(),
     angularVelocity: new THREE.Vector3(),
     targetLook: new THREE.Vector2(0, 0),
-    currentLook: new THREE.Vector2(0, 0)
+    currentLook: new THREE.Vector2(0, 0),
+    mouthScale: 0.0
   };
 
   // 5-State Companion Emotion & Animation Behaviors
   let currentCompanionState = 'idle';
   let currentSpeechLevel = 0.0;
+  let mouthScale = 0.0;
 
   function setCompanionState(newState) {
     currentCompanionState = newState || 'idle';
@@ -373,12 +390,21 @@ export function createBlobCreature() {
 
   function setSpeechLevel(level) {
     currentSpeechLevel = Math.max(0, Math.min(1, Number(level) || 0));
+    mouthScale = currentSpeechLevel;
+    animState.mouthScale = mouthScale;
+  }
+
+  function setMouthScale(scale) {
+    mouthScale = Math.max(0, Math.min(1.5, Number(scale) || 0));
+    currentSpeechLevel = Math.min(1, mouthScale);
+    animState.mouthScale = mouthScale;
   }
 
   // Spatial anchor position & viewer-facing orientation for AR plane placement
-  const anchorPos = new THREE.Vector3(0, 0, 0);
-  const targetAnchorPos = new THREE.Vector3(0, 0, 0);
-  const startAnchorPos = new THREE.Vector3(0, 0, 0);
+  // Paws rest on y = 0.0 so body/face center is at y = 0.94 (~1.0), matching camera.lookAt(0, 1, 0)
+  const anchorPos = new THREE.Vector3(0, 0.94, 0);
+  const targetAnchorPos = new THREE.Vector3(0, 0.94, 0);
+  const startAnchorPos = new THREE.Vector3(0, 0.94, 0);
   let isPlaced = false;
   let isPlacing = false;
   let placeProgress = 1.0;
@@ -441,7 +467,7 @@ export function createBlobCreature() {
     const s = animState.baseScale;
     const ox = animState.baseX || 0.0;
     const oz = animState.baseZ || 0.0;
-    const targetY = -0.94 + 0.94 * s;
+    const targetY = 0.94 * s;
     if (animate) {
       startAnchorPos.copy(anchorPos);
       targetAnchorPos.set(ox, targetY, oz);
@@ -463,16 +489,17 @@ export function createBlobCreature() {
     }
   }
 
-  function setEnvironmentScale(scale, offsetX = 0.0, offsetZ = 0.0) {
+  function setEnvironmentScale(scale, offsetX = 0.0, offsetZ = 0.0, offsetY = 0.0) {
     const s = Number.isFinite(scale) && scale > 0 ? scale : 1.0;
     const ox = Number.isFinite(offsetX) ? offsetX : 0.0;
     const oz = Number.isFinite(offsetZ) ? offsetZ : 0.0;
+    const oy = Number.isFinite(offsetY) ? offsetY : 0.0;
     animState.baseScale = s;
     animState.baseX = ox;
-    animState.baseY = -0.94 * (1.0 - s);
+    animState.baseY = oy;
     animState.baseZ = oz;
     if (!isPlaced) {
-      anchorPos.set(ox, -0.94 + 0.94 * s, oz);
+      anchorPos.set(ox, 0.94 * s + oy, oz);
       targetAnchorPos.copy(anchorPos);
       startAnchorPos.copy(anchorPos);
       facingYaw = 0.0;
@@ -482,8 +509,8 @@ export function createBlobCreature() {
     }
   }
 
-  function triggerBoop() {
-    animState.boopImpulse = 1.0;
+  function triggerBoop(strength = 1.0) {
+    animState.boopImpulse = typeof strength === 'number' ? strength : 1.0;
     animState.boopPhase = 0.0;
   }
 
@@ -630,12 +657,29 @@ export function createBlobCreature() {
       blinkScaleY = Math.max(0.2, blinkScaleY);
     }
 
-    // Speech mouth movement & body bounce
-    if (isSpeaking && currentSpeechLevel > 0.05) {
-      const mouthBounce = 1.0 + currentSpeechLevel * 0.45 * Math.sin(animState.time * 26.0);
+    // Speech mouth movement & audio-reactive lip-sync squash-and-stretch (mouthScale)
+    const activeMouthScale = Math.max(mouthScale, isSpeaking ? currentSpeechLevel : 0.0);
+    if (activeMouthScale > 0.02) {
+      const syllabicWave = 0.72 + 0.28 * Math.sin(animState.time * 28.0);
+      const effectiveScale = activeMouthScale * syllabicWave;
+      const mouthBounce = 1.0 + effectiveScale * 0.45;
       faceGroup.position.y = (mouthBounce - 1.0) * 0.04;
+
+      // Squash & stretch mouth geometry based on mouthScale
+      const stretchY = 1.0 + effectiveScale * 1.65;
+      const squashX = 1.0 - effectiveScale * 0.22 + Math.cos(animState.time * 22.0) * effectiveScale * 0.1;
+      const stretchZ = 1.0 + effectiveScale * 0.35;
+      mouthGroup.scale.set(squashX, stretchY, stretchZ);
+
+      mouthCavity.scale.set(
+        0.75 + effectiveScale * 0.45,
+        Math.max(0.05, effectiveScale * 1.15),
+        0.8 + effectiveScale * 0.3
+      );
     } else {
       faceGroup.position.y = 0;
+      mouthGroup.scale.lerp(new THREE.Vector3(1, 1, 1), Math.min(1.0, safeDt * 14.0));
+      mouthCavity.scale.lerp(new THREE.Vector3(0.01, 0.01, 0.01), Math.min(1.0, safeDt * 16.0));
     }
 
     for (const eye of eyes) {
@@ -645,13 +689,27 @@ export function createBlobCreature() {
     }
   }
 
+  function setEyeColor(hexColor) {
+    if (!hexColor) return;
+    try {
+      irisMaterial.color.set(hexColor);
+      const darkBase = new THREE.Color(hexColor).multiplyScalar(0.28);
+      eyeMaterial.color.copy(darkBase);
+    } catch {}
+  }
+
   return {
     root,
     bodyMesh,
     bodyGeometry,
     skinMaterial,
+    eyeMaterial,
+    irisMaterial,
+    mouthGroup,
+    mouthCavity,
     animState,
     setEnvironmentScale,
+    setEyeColor,
     triggerBoop,
     placeAt,
     resetPlacement,
@@ -659,7 +717,10 @@ export function createBlobCreature() {
     getAnchorPosition: () => anchorPos,
     setCompanionState,
     setSpeechLevel,
+    setMouthScale,
+    getMouthScale: () => mouthScale,
     getCompanionState: () => currentCompanionState,
     update
   };
 }
+

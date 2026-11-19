@@ -1,0 +1,25 @@
+{
+  "tools": [
+    {
+      "name": "slack_tool",
+      "service": "slack",
+      "description": "Autonomous self-written tool for Slack API interaction",
+      "scriptPath": "/app/applet/backend/dynamic_tools/slack_tool.py",
+      "parameters": {
+        "params": "object"
+      },
+      "isDynamic": true
+    },
+    {
+      "name": "notion_tool",
+      "service": "notion",
+      "description": "Autonomous self-written tool for Notion API interaction",
+      "scriptPath": "/app/applet/backend/dynamic_tools/notion_tool.py",
+      "parameters": {
+        "params": "object"
+      },
+      "isDynamic": true
+    }
+  ],
+  "last_updated": 1793490580.312779
+}

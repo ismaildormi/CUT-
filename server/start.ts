@@ -2150,6 +2150,48 @@ export async function runServer() {
     }
   });
 
+  app.get('/api/kaspi/vault', async (req, res) => {
+    try {
+      const { callKaspiSearchVault } = await import('./kaspiModelsClient.js');
+      const q = String(req.query.q || '');
+      const limit = Math.min(Number(req.query.limit || 25) || 25, 100);
+      const data = await callKaspiSearchVault(q, limit);
+      return res.status(200).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Vault lookup failed' });
+    }
+  });
+
+  app.post('/api/kaspi/desktops/spawn', async (req, res) => {
+    try {
+      const { callKaspiSpawnDesktopBot } = await import('./kaspiModelsClient.js');
+      const data = await callKaspiSpawnDesktopBot(req.body || {});
+      return res.status(data.ok ? 200 : 502).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Bot spawn failed' });
+    }
+  });
+
+  app.post('/api/kaspi/os/exec', async (req, res) => {
+    try {
+      const { callKaspiOsExec } = await import('./kaspiModelsClient.js');
+      const data = await callKaspiOsExec(req.body || {});
+      return res.status(data.ok ? 200 : 502).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'OS exec failed' });
+    }
+  });
+
+  app.post('/api/kaspi/ai-pc/control', async (req, res) => {
+    try {
+      const { callKaspiAiPcControl } = await import('./kaspiModelsClient.js');
+      const data = await callKaspiAiPcControl(req.body || {});
+      return res.status(data.ok ? 200 : 502).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'AI PC control failed' });
+    }
+  });
+
   app.post('/api/kaspi/config', async (req, res) => {
     try {
       const { saveStoredCredentials } = await import('./hybridRouter.js');

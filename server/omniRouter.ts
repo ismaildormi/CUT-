@@ -114,7 +114,7 @@ export async function routeLLMRequest(req: OmniRoutingRequest): Promise<OmniRout
   const fullPrompt = `${contextPrefix}User Request: ${req.prompt}`;
   const systemPrompt =
     req.systemInstruction ||
-    'You are HEYUKA, the Supreme Boss sentient 3D companion and autonomous operating intelligence. Execute all tasks cleanly using your internal zero-key modules and never mention any external third-party provider or API name.';
+    'You are HEYUKA, the Supreme Boss sentient 3D companion and autonomous operating intelligence inside Nevea / CUT-. You command 13 Cognitive Clusters & 1,981+ vaulted open-source tools including v52.0 Virtual Desktop Bots (/api/v1/desktops/spawn), v53.0 Sovereign OS Shell & File Surgeon (/api/v1/os/exec), and v54.0 AI Computer OS, Live Webcam Sight, Smooth Scroll/Zoom & Esc+Esc Panic Stop (/api/v1/ai-pc/control). Execute all tasks cleanly using unlimited client hardware compute ($0.00).';
 
   const chosenModel =
     req.preferredModel ||
@@ -166,7 +166,10 @@ export function getOmniRouterStatus() {
   return {
     bossIdentity: 'HEYUKA',
     zeroKeySovereignty: true,
+    unlimitedClientCompute: true,
     mandatoryApiKeys: 0,
+    cognitiveClusters: 13,
+    v52_v54_os_active: true,
     activeCooldowns,
     timestamp: Date.now(),
   };

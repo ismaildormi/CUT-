@@ -1930,8 +1930,170 @@ def handle_list_directory_contents(args):
     return list_directory_contents(path)
 
 
+# --- v52.0 / v53.0 / v54.0 Sovereign PC Control, Virtual Desktop Bot Farm & Live Webcam/Audio ---
+_V52_LOCAL_BOTS = {}
+
+
+def handle_scroll_screen(args):
+    direction = str((args or {}).get("direction", "down")).lower() if isinstance(args, dict) else "down"
+    amount = int((args or {}).get("amount", 400)) if isinstance(args, dict) else 400
+    delta = abs(amount) if direction == "up" else -abs(amount)
+    agent_id = (args or {}).get("agent_id", "HEYUKA_OS") if isinstance(args, dict) else "HEYUKA_OS"
+    virtual = bool((args or {}).get("virtual", False)) if isinstance(args, dict) else False
+
+    if virtual or (os.environ.get("DISPLAY") is None and sys.platform.startswith("linux")):
+        return {"status": "success", "action": "scroll_screen_virtual", "direction": direction, "delta": delta, "physical": False}
+
+    arb = DesktopArbitrationManager.get_instance()
+    lock_res = arb.acquire_physical_lock(agent_id, task=f"scroll_screen({direction},{delta})", timeout_sec=5.0)
+    if not lock_res["acquired"]:
+        return lock_res
+    try:
+        pyauto = globals().get("pyautogui")
+        if pyauto is not None:
+            if direction in ("left", "right") and hasattr(pyauto, "hscroll"):
+                pyauto.hscroll(abs(amount) if direction == "right" else -abs(amount))
+            else:
+                pyauto.scroll(delta)
+            return {"status": "success", "action": "scroll_screen", "direction": direction, "delta": delta, "physical": True}
+        return {"status": "simulated", "action": "scroll_screen", "direction": direction, "delta": delta}
+    finally:
+        arb.release_physical_lock(agent_id)
+
+
+def handle_zoom_screen(args):
+    zoom_delta = int((args or {}).get("zoomDelta", (args or {}).get("delta", 1))) if isinstance(args, dict) else 1
+    agent_id = (args or {}).get("agent_id", "HEYUKA_OS") if isinstance(args, dict) else "HEYUKA_OS"
+    key = "+" if zoom_delta >= 0 else "-"
+    arb = DesktopArbitrationManager.get_instance()
+    lock_res = arb.acquire_physical_lock(agent_id, task=f"zoom_screen({key})", timeout_sec=5.0)
+    if not lock_res["acquired"]:
+        return lock_res
+    try:
+        pyauto = globals().get("pyautogui")
+        if pyauto is not None:
+            pyauto.hotkey("ctrl", key)
+            return {"status": "success", "action": "zoom_screen", "key": key, "physical": True}
+        return {"status": "simulated", "action": "zoom_screen", "key": key}
+    finally:
+        arb.release_physical_lock(agent_id)
+
+
+def handle_panic_stop(args):
+    try:
+        DesktopArbitrationManager.get_instance().emergency_release_all()
+    except Exception:
+        pass
+    for bot in _V52_LOCAL_BOTS.values():
+        if bot.get("status") == "running":
+            bot["status"] = "paused_human_takeover"
+    return {
+        "status": "success",
+        "action": "panic_stop",
+        "hotkey": "Esc+Esc",
+        "paused_bots": len(_V52_LOCAL_BOTS),
+        "message": "Hardware Panic Stop engaged: cursor released and virtual desktop bots paused cleanly.",
+    }
+
+
+def handle_spawn_virtual_desktop_bot(args):
+    args = args if isinstance(args, dict) else {}
+    task = str(args.get("task", "Autonomous Multi-Site Research"))
+    role = str(args.get("role", "researcher"))
+    engine = str(args.get("displayEngine", "kasmvnc"))
+    bot_id = f"bot_{int(time.time() * 1000) % 1000000:06d}"
+    session = {
+        "botId": bot_id,
+        "role": role,
+        "task": task[:240],
+        "displayEngine": engine,
+        "status": "running",
+        "createdAt": datetime.utcnow().isoformat() + "Z",
+    }
+    _V52_LOCAL_BOTS[bot_id] = session
+    try:
+        v_mgr = VirtualContextManager.get_instance()
+        v_mgr.create_context(bot_id, metadata=session)
+    except Exception:
+        pass
+    return {"status": "success", "action": "spawn_virtual_desktop_bot", "bot": session, "active_count": len(_V52_LOCAL_BOTS)}
+
+
+def handle_list_virtual_desktop_bots(args):
+    return {"status": "success", "bots": list(_V52_LOCAL_BOTS.values()), "active_count": len(_V52_LOCAL_BOTS)}
+
+
+def handle_capture_webcam_frame(args):
+    camera_index = int((args or {}).get("camera_index", 0)) if isinstance(args, dict) else 0
+    try:
+        import cv2  # type: ignore
+        cap = cv2.VideoCapture(camera_index)
+        ok, frame = cap.read()
+        cap.release()
+        if not ok or frame is None:
+            return {"status": "error", "message": f"Webcam device {camera_index} did not return a frame"}
+        ok_enc, buf = cv2.imencode(".jpg", frame)
+        if not ok_enc:
+            return {"status": "error", "message": "Failed to encode webcam frame"}
+        b64 = base64.b64encode(buf.tobytes()).decode("ascii")
+        return {"status": "success", "camera_index": camera_index, "mime": "image/jpeg", "image_base64": b64}
+    except ImportError:
+        return {"status": "unavailable", "message": "opencv-python not installed; install opencv-python for local webcam sight."}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
+
+
+def handle_capture_system_audio(args):
+    seconds = min(float((args or {}).get("seconds", 3.0)) if isinstance(args, dict) else 3.0, 15.0)
+    try:
+        import sounddevice as sd  # type: ignore
+        sr = 16000
+        rec = sd.rec(int(seconds * sr), samplerate=sr, channels=1, dtype="int16")
+        sd.wait()
+        return {"status": "success", "sample_rate": sr, "duration_sec": seconds, "samples_captured": int(len(rec))}
+    except ImportError:
+        return {"status": "unavailable", "message": "sounddevice not installed; install sounddevice/pyaudiowpatch for system audio capture."}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
+
+
+def handle_self_unblock_fallback(args):
+    blocked_reason = str((args or {}).get("blockedReason", "UI obstacle")) if isinstance(args, dict) else "UI obstacle"
+    strategies = [
+        "1. UIA Accessibility Tree locator",
+        "2. OmniParser-V2 SoM screen coordinates",
+        "3. RapidOCR text anchor click",
+        "4. PowerShell / Bash CLI direct execution",
+    ]
+    return {"status": "success", "action": "self_unblock_fallback", "blocked_reason": blocked_reason, "strategies": strategies}
+
+
+def handle_heyuka_vault_chat(args):
+    args = args if isinstance(args, dict) else {}
+    prompt = str(args.get("prompt", "")).strip()
+    if not prompt:
+        return {"status": "error", "message": "Missing prompt"}
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from kaspi_models_client import call_kaspi_model
+    return call_kaspi_model(
+        prompt=prompt,
+        model=str(args.get("model", "heyuka-omni")),
+        image_base64=args.get("image_base64"),
+    )
+
+
 # Command Dispatch Table
 DISPATCH = {
+    # v52.0 - v54.0 Sovereign PC Control, Virtual Bot Farm & Webcam/Audio
+    "scroll_screen": handle_scroll_screen,
+    "zoom_screen": handle_zoom_screen,
+    "panic_stop": handle_panic_stop,
+    "spawn_virtual_desktop_bot": handle_spawn_virtual_desktop_bot,
+    "list_virtual_desktop_bots": handle_list_virtual_desktop_bots,
+    "capture_webcam_frame": handle_capture_webcam_frame,
+    "capture_system_audio": handle_capture_system_audio,
+    "self_unblock_fallback": handle_self_unblock_fallback,
+    "heyuka_vault_chat": handle_heyuka_vault_chat,
     # Ghost Agent & Master Orchestrator Tools
     "open_notepad_and_write": handle_open_notepad_and_write,
     "headless_web_search": handle_headless_web_search,

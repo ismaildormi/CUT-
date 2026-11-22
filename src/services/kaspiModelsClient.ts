@@ -101,3 +101,57 @@ export async function saveKaspiCredentials(payload: {
   });
   return resp.json().catch(() => ({ ok: false }));
 }
+
+export async function callKaspiSpawnDesktopBotClient(payload: {
+  action?: 'spawn' | 'list' | 'takeover' | 'resume' | 'destroy';
+  task?: string;
+  role?: string;
+  displayEngine?: string;
+  botId?: string;
+}) {
+  const resp = await fetch('/api/kaspi/desktops/spawn', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return resp.json().catch(() => ({ ok: false }));
+}
+
+export async function callKaspiOsExecClient(payload: {
+  action?: 'shell' | 'file_lifecycle' | 'sentinel_health' | 'app_operate';
+  command?: string;
+  targetPath?: string;
+  appTitle?: string;
+  editSnippet?: string;
+}) {
+  const resp = await fetch('/api/kaspi/os/exec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return resp.json().catch(() => ({ ok: false }));
+}
+
+export async function callKaspiAiPcControlClient(payload: {
+  action?: 'scroll' | 'zoom' | 'self_unblock' | 'webcam_vision' | 'panic_stop' | 'dispatch';
+  direction?: 'up' | 'down' | 'left' | 'right';
+  amount?: number;
+  zoomDelta?: number;
+  blockedReason?: string;
+  cameraMode?: string;
+  prompt?: string;
+}) {
+  const resp = await fetch('/api/kaspi/ai-pc/control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return resp.json().catch(() => ({ ok: false }));
+}
+
+export async function fetchKaspiSovereignVaultClient(query = '', limit = 25) {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (query.trim()) qs.set('q', query.trim());
+  const resp = await fetch(`/api/kaspi/vault?${qs.toString()}`);
+  return resp.json().catch(() => ({ ok: false }));
+}

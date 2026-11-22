@@ -492,6 +492,55 @@ export async function callKaspiSearchVault(
   }
 }
 
+export async function callKaspiStudioCouncil(
+  payload: {
+    prompt: string;
+    scale?: 'auto' | '3x_fast' | '6x_pro' | '12x_titan';
+    brand?: 'heyuka' | 'kaspi_pos';
+    locale?: 'ar' | 'fr' | 'en';
+  },
+  overrides?: KaspiAuthOverrides
+) {
+  const conn = resolveKaspiConnection(overrides);
+  try {
+    const resp = await fetch(`${conn.baseUrl}/studio/council`, {
+      method: 'POST',
+      headers: buildKaspiHeaders(conn),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data: any = await resp.json().catch(() => ({}));
+    return { ok: resp.ok, ...data };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Studio Elastic Council failed' };
+  }
+}
+
+export async function callKaspiMagic(
+  payload: {
+    prompt: string;
+    brand?: 'heyuka' | 'kaspi_pos';
+    scale?: 'auto' | '3x_fast' | '6x_pro' | '12x_titan';
+    locale?: 'ar' | 'fr' | 'en';
+    enhanceOnly?: boolean;
+  },
+  overrides?: KaspiAuthOverrides
+) {
+  const conn = resolveKaspiConnection(overrides);
+  try {
+    const resp = await fetch(`${conn.baseUrl}/magic`, {
+      method: 'POST',
+      headers: buildKaspiHeaders(conn),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data: any = await resp.json().catch(() => ({}));
+    return { ok: resp.ok, ...data };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Magic engine call failed' };
+  }
+}
+
 export async function getKaspiModelsCatalog(overrides?: KaspiAuthOverrides) {
   const conn = resolveKaspiConnection(overrides);
   let liveReachable = false;
@@ -523,8 +572,10 @@ export async function getKaspiModelsCatalog(overrides?: KaspiAuthOverrides) {
     configured: conn.configured,
     zeroKeyReady: true,
     unlimitedRequests: true,
-    cognitiveClusters: 13,
+    cognitiveClusters: 18,
     v52_v54_ready: true,
+    v55_v60_studioReady: true,
+    studioUrl: 'https://kaspi-pos.vercel.app/ar/studio?brand=heyuka',
     hasKeyId: Boolean(conn.keyId),
     activeModel: conn.activeModel,
     liveReachable,

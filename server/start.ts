@@ -2192,6 +2192,26 @@ export async function runServer() {
     }
   });
 
+  app.post('/api/kaspi/studio/council', async (req, res) => {
+    try {
+      const { callKaspiStudioCouncil } = await import('./kaspiModelsClient.js');
+      const data = await callKaspiStudioCouncil(req.body || {});
+      return res.status(data.ok ? 200 : 502).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Studio council failed' });
+    }
+  });
+
+  app.post('/api/kaspi/magic', async (req, res) => {
+    try {
+      const { callKaspiMagic } = await import('./kaspiModelsClient.js');
+      const data = await callKaspiMagic(req.body || {});
+      return res.status(data.ok ? 200 : 502).json(data);
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Magic synthesis failed' });
+    }
+  });
+
   app.post('/api/kaspi/config', async (req, res) => {
     try {
       const { saveStoredCredentials } = await import('./hybridRouter.js');
